@@ -13,8 +13,8 @@ PREFIX = "yellow/"
 
 def get_latest_available_month():
     """
-    NYC Taxi が公開している最新年月を取得する。
-    過去12か月をチェックし、存在する中で最新を返す。
+    Retrieve the latest year and month published by NYC Taxi. 
+    Check the past 12 months and return the most recent one available.
     """
     today = datetime.today()
     available_months = []
@@ -45,7 +45,7 @@ def get_latest_available_month():
 
 def get_latest_month_in_gcs(bucket_name, prefix):
     """
-    GCS にすでに存在する最新年月を返す。
+    Returns the latest year-month already present in GCS.
     """
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
@@ -70,18 +70,18 @@ def get_latest_month_in_gcs(bucket_name, prefix):
 
 @app.route("/")
 def pipeline():
-    # ① NYCサイトの最新公開月
+    # Month of latest NYC site
     latest_nyc_month = get_latest_available_month()
     if not latest_nyc_month:
         return "No NYC Taxi file found for recent months."
 
-    # ② GCSにすでにある最新月
+    # Latest month already in GCS
     latest_gcs_month = get_latest_month_in_gcs(BUCKET_NAME, PREFIX)
 
     if latest_nyc_month == latest_gcs_month:
         return f"Latest data ({latest_nyc_month}) already exists in GCS."
 
-    # ③ ファイルダウンロード
+    # File download
     file = f"yellow_tripdata_{latest_nyc_month}.parquet"
     url = f"https://d37ci6vzurychx.cloudfront.net/trip-data/{file}"
 
@@ -94,7 +94,7 @@ def pipeline():
     except requests.RequestException as e:
         return f"Error downloading file: {e}"
 
-    # ④ GCSアップロード
+    # GCS upload
     year, month = latest_nyc_month.split("-")
     storage_client = storage.Client()
     bucket = storage_client.bucket(BUCKET_NAME)
@@ -103,7 +103,7 @@ def pipeline():
 
     print(f"Uploaded {file} to gs://{BUCKET_NAME}/yellow/{year}/")
 
-    # ⑤ BigQuery 外部テーブル作成
+    # create BigQuery external table
     bq = bigquery.Client()
     table_name = f"raw.ext_{latest_nyc_month.replace('-', '_')}"
 
